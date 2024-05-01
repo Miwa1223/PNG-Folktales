@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Papua New Guinea Provinces Visualization</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../leaflet/leaflet.css" />
+    <style>
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            padding: 10px;
+            background: white;
+            border: 1px solid #777;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map" style="position:absolute;top:0;left:0;right:0;bottom:0;"></div>
+    <div id="legend"></div>
+    <script src="../leaflet/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([-6.315, 148], 7);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 10
+        }).addTo(map);
+
+        var fishCounts = {            
+        "West Sepik Province": 7,
+        "East Sepik Province": 18,
+        "Madang Province": 35,
+        "West New Britain Province": 16,
+        "Southern Highlands Province": 14,
+        "Morobe Province": 5
+        };
+
+        var getColor = function (d) {
+            return d > 20 ? '#d62728' :
+                   d > 15 ? '#db3f40' :
+                   d > 10  ? '#df5758' :
+                   d > 5  ? '#e46f70' :
+                   d > 1  ? '#e88788' :
+                            '#ed9f9f';
+        };
+
+        var legend = L.control({position: 'bottomright'});
+
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info legend');
+            var grades = [0, 2, 4, 6, 11, 16];
+            var colors = grades.map(g => getColor(g));
+            var labels = [];
+
+            for (var i = 0; i < grades.length; i++) {
+                labels.push(
+                    '<i style="background:' + colors[i] + '">&nbsp;&nbsp;&nbsp;&nbsp;</i> ' +
+                    (grades[i + 1] ? grades[i] + '–' + grades[i + 1] : grades[i] + '+'));
+            }
+
+            div.innerHTML = labels.join('<br>');
+            return div;
+        };
+
+        legend.addTo(map);
+
+        fetch('geoBoundaries-PNG-ADM1.geojson')
+            .then(response => response.json())
+            .then(geojson => {
+                L.geoJSON(geojson, {
+                    style: function (feature) {
+                        var name = feature.properties.shapeName;
+                        return {
+                            fillColor: getColor(fishCounts[name]),
+                            weight: 2,
+                            opacity: 1,
+                            color: 'white',
+                            fillOpacity: 0.7
+                        };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        var name = feature.properties.shapeName;
+                        if (['East Sepik Province', 'Madang Province', 'West New Britain Province'].includes(name)) {
+                            layer.bindTooltip(name + ": " + fishCounts[name], {permanent: true, direction: 'center'}).openTooltip();
+                        }
+                    }
+                }).addTo(map);
+            });
+    </script>
+</body>
+</html>
